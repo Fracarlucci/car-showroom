@@ -3,9 +3,9 @@
 import * as THREE from "three";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min.js';
 
 // import {TWEEN} from "../lib/tween.module.min.js";
-// import {GUI} from "../lib/lil-gui.module.min.js";
 
 const textureLoader = new THREE.TextureLoader();
 const groundTexture = textureLoader.load('./textures/Floor1.jpg'); // Change this path!
@@ -14,7 +14,18 @@ groundTexture.repeat.set(10, 10); // Repeat texture for a tiled effect
 
 // Variables estandar
 let renderer, scene, camera;
+const loader = new GLTFLoader();
+let currentModel = null; // Store the current model
 
+const gui = new GUI();
+const modelOptions = {
+    Model: 'Ferrari 488',
+};
+const modelPaths = {
+    "Ferrari 488": './models/2016-ferrari-488-gtb/source/2016_ferrari_488_gtb.glb',
+    "Ferrari F40": './models/1987_ferrari_f40.glb',
+    "Ferrari 288 GTO": './models/ferrari_288_gto.glb'
+};
 // Acciones
 init();
 loadScene();
@@ -23,7 +34,7 @@ render();
 
 function init(){
     // Motor de render
-    renderer = new THREE.WebGLRenderer();
+    renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize( window.innerWidth, window.innerHeight );
     //renderer.setClearColor( new THREE.Color(0x0000AA) );
     document.getElementById('container').appendChild( renderer.domElement );
@@ -49,10 +60,19 @@ function init(){
     
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.minDistance = 3;  // Minimum zoom (prevents camera from going inside model)
+    controls.maxDistance = 6;
+    controls.maxPolarAngle = Math.PI / 2.5; // Limits vertical rotation (prevents looking below ground)
+    controls.minPolarAngle = 0;
+    controls.update();
+    
     
     renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Softer shadows
-
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Softer shadows
+    
+    window.addEventListener('resize', updateAspectRatio );
+    
 }
 function loadScene(){ 
     const groundGeometry = new THREE.PlaneGeometry(500, 500); // Large ground
@@ -65,41 +85,78 @@ function loadScene(){
     scene.add(ground);
     
     renderer.shadowMap.enabled = true;
-    // Load GLTF Model
-    const loader = new GLTFLoader();
-    loader.load(
-        './models/2016-ferrari-488-gtb/source/2016_ferrari_488_gtb.glb', // Change this to your actual model path
-        function (gltf) {
-            const model = gltf.scene;
-            model.scale.set(80, 80, 80); // Scale model by 50 times
-            model.position.set(0, 0.1, 0); // Adjust X, Y, Z positions
-            model.traverse((child) => {
-                if (child.isMesh) {
-                    child.castShadow = true; // Allow model to cast shadows
-                    child.receiveShadow = true; // Allow model to receive shadows (optional)
-                }
-            });
-            scene.add(model)
-        },
-        function (xhr) {
-            console.log(`Model ${(xhr.loaded / xhr.total) * 100}% loaded`);
-        },
-        function (error) {
-            console.error('An error happened', error);
-        }
-        );
-    }
-    function setupGUI(){}
-    function render(){
-        requestAnimationFrame(render);
-        update();
-        renderer.render(scene,camera);
+}
+function setupGUI(){
+    
+    gui.add(modelOptions, 'Model', Object.keys(modelPaths)).onChange((value) => {
+        loadModel(modelPaths[value]); // Load selected model
+    });
+    
+    // Load default model
+    loadModel(modelPaths[modelOptions.Model]);
+}
+
+function loadModel(modelPath) {
+    if (currentModel) {
+        scene.remove(currentModel);
+        currentModel.traverse((child) => {
+            if (child.isMesh) {
+                child.geometry.dispose(); // Free memory
+                child.material.dispose();
+            }
+        });
+        currentModel = null;
     }
     
-    function updateAspectRatio(){}
-    function update(){}
+    loader.load(modelPath, function (gltf) {
+        const model = gltf.scene;
+        model.scale.set(80, 80, 80); // Scale model by 50 times
+        model.position.set(0, 0.1, 0);
+        model.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
+        scene.add(model)
+        currentModel = model; // Store current model for future removal
+    },
+    function (xhr) {
+        console.log(`Model ${(xhr.loaded / xhr.total) * 100}% loaded`);
+    },
+    function (error) {
+        console.error('An error happened', error);
+    }
+    );
+}
+
+function render(){
+    requestAnimationFrame(render);
+    update();
+    renderer.render(scene,camera);
+}
+
+function update(){}
+
+function updateAspectRatio()
+{
+    const ar = window.innerWidth/window.innerHeight;
+    renderer.setSize(window.innerWidth,window.innerHeight);
+    camera.aspect = ar;
+    camera.updateProjectionMatrix();
+}
+const keys = {}; // Store key states
+const moveSpeed = 0.2; // Adjust movement speed
+const rotateSpeed = 0.05; // Adjust rotation speed
+
+window.addEventListener('keydown', (event) => { keys[event.key] = true; });
+window.addEventListener('keyup', (event) => { keys[event.key] = false; });
+
+function updateModelMovement() {
+    if (!currentModel) return; // Make sure a model is loaded
     
-    // function animate() {
-    //     requestAnimationFrame(animate);
-    //     renderer.render(scene, camera);
-    // }
+    if (keys['ArrowUp']) currentModel.position.z -= moveSpeed;  // Move forward
+    if (keys['ArrowDown']) currentModel.position.z += moveSpeed; // Move backward
+    if (keys['ArrowLeft']) currentModel.rotation.y += rotateSpeed; // Rotate left
+    if (keys['ArrowRight']) currentModel.rotation.y -= rotateSpeed; // Rotate right
+}
