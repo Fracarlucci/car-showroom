@@ -16,8 +16,14 @@ groundTexture.repeat.set(10, 10); // Repeat texture for a tiled effect
 let renderer, scene, camera;
 const loader = new GLTFLoader();
 let currentModel = null; // Store the current model
+let isMoving = false; // Toggle movement
 
 const gui = new GUI();
+let angle = 0; // Initial angle
+const radius = 5; // Circle size
+const speed = 0.02; // Speed of movement
+let originalPosition = new THREE.Vector3(); // Store the initial position
+
 const modelOptions = {
     Model: 'Ferrari 488',
 };
@@ -55,6 +61,8 @@ function init(){
     const dirLight = new THREE.DirectionalLight(0xffffff, 3); // Intensity 3
     dirLight.position.set(5, 10, 5); // Position the light
     dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 1024; // Shadow map size
+    dirLight.shadow.mapSize.height = 1024;
     scene.add(dirLight);
     
     
@@ -87,9 +95,18 @@ function loadScene(){
     renderer.shadowMap.enabled = true;
 }
 function setupGUI(){
-    
+    const options = { MoveInCircle: false };
+
     gui.add(modelOptions, 'Model', Object.keys(modelPaths)).onChange((value) => {
         loadModel(modelPaths[value]); // Load selected model
+    });
+    gui.add(options, 'MoveInCircle').onChange((value) => {
+        isMoving = value;
+        if (isMoving && currentModel) {
+            // Save the model's initial position when movement starts
+            originalPosition.copy(currentModel.position);
+            angle = 0; // Reset angle to start from the same point
+        }
     });
     
     // Load default model
@@ -131,8 +148,8 @@ function loadModel(modelPath) {
 }
 
 function render(){
-    requestAnimationFrame(render);
-    update();
+     requestAnimationFrame(render);
+    moveInCircle(); // Move model in a circle
     renderer.render(scene,camera);
 }
 
@@ -145,18 +162,14 @@ function updateAspectRatio()
     camera.aspect = ar;
     camera.updateProjectionMatrix();
 }
-const keys = {}; // Store key states
-const moveSpeed = 0.2; // Adjust movement speed
-const rotateSpeed = 0.05; // Adjust rotation speed
 
-window.addEventListener('keydown', (event) => { keys[event.key] = true; });
-window.addEventListener('keyup', (event) => { keys[event.key] = false; });
 
-function updateModelMovement() {
-    if (!currentModel) return; // Make sure a model is loaded
-    
-    if (keys['ArrowUp']) currentModel.position.z -= moveSpeed;  // Move forward
-    if (keys['ArrowDown']) currentModel.position.z += moveSpeed; // Move backward
-    if (keys['ArrowLeft']) currentModel.rotation.y += rotateSpeed; // Rotate left
-    if (keys['ArrowRight']) currentModel.rotation.y -= rotateSpeed; // Rotate right
+function moveInCircle() {
+    if (!currentModel || !isMoving) return;
+   
+    angle += speed;
+    currentModel.position.x = originalPosition.x + Math.cos(angle) * radius;
+    currentModel.position.z = originalPosition.z + Math.sin(angle) * radius;
+    currentModel.rotation.y = -angle; // Rotate to face movement direction
 }
+
