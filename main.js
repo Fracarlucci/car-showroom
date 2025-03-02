@@ -4,21 +4,15 @@ import * as THREE from "three";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min.js';
-
 // import {TWEEN} from "../lib/tween.module.min.js";
-
-const textureLoader = new THREE.TextureLoader();
-const groundTexture = textureLoader.load('./textures/Floor1.jpg'); // Change this path!
-groundTexture.wrapS = groundTexture.wrapT = THREE.RepeatWrapping;
-groundTexture.repeat.set(10, 10); // Repeat texture for a tiled effect
 
 // Variables estandar
 let renderer, scene, camera;
 const loader = new GLTFLoader();
-let currentModel = null; // Store the current model
-let isMoving = false; // Toggle movement
 
 const gui = new GUI();
+let currentModel = null; // Store the current model
+let isMoving = false; // Toggle movement
 let angle = 0; // Initial angle
 const radius = 5; // Circle size
 const speed = 0.02; // Speed of movement
@@ -28,10 +22,11 @@ const modelOptions = {
     Model: 'Ferrari 488',
 };
 const modelPaths = {
-    "Ferrari 488": './models/2016-ferrari-488-gtb/source/2016_ferrari_488_gtb.glb',
-    "Ferrari F40": './models/1987_ferrari_f40.glb',
-    "Ferrari 288 GTO": './models/ferrari_288_gto.glb'
+    "Ferrari 488": { path: './models/2016-ferrari-488-gtb/source/2016_ferrari_488_gtb.glb', height: 0.1 },
+    "Ferrari F40": { path: './models/1987_ferrari_f40.glb', height: 0 },
+    "Ferrari 288 GTO": { path: './models/ferrari_288_gto.glb', height: -1 }
 };
+
 // Acciones
 init();
 loadScene();
@@ -65,7 +60,6 @@ function init(){
     dirLight.shadow.mapSize.height = 1024;
     scene.add(dirLight);
     
-    
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
@@ -83,23 +77,69 @@ function init(){
     
 }
 function loadScene(){ 
-    const groundGeometry = new THREE.PlaneGeometry(500, 500); // Large ground
+    const textureLoader = new THREE.TextureLoader();
+    const wallTexture = textureLoader.load('./textures/wall.jpg'); // Change path to your wall texture
+    const groundTexture = textureLoader.load('./textures/floor2.jpg'); // Change this path!
+    const ceilingTexture = textureLoader.load('./textures/ceiling.jpg'); // Change this path!
+    groundTexture.wrapS = groundTexture.wrapT = THREE.RepeatWrapping;
+    groundTexture.repeat.set(5,5); // Repeat texture for a tiled effect
+    const groundGeometry = new THREE.PlaneGeometry(20,20); // Large ground
     const groundMaterial = new THREE.MeshStandardMaterial({ map: groundTexture });
     
+    // Wall size
+    const wallWidth = 20;
+    const wallHeight = 10;
+    const ceilingHeight = 5;
+    const wallMaterial = new THREE.MeshStandardMaterial({ map: wallTexture });
+    const ceilingMaterial = new THREE.MeshStandardMaterial({ map: ceilingTexture });
+    
+    // Ground
     const ground = new THREE.Mesh(groundGeometry, groundMaterial);
     ground.rotation.x = -Math.PI / 2; // Make it horizontal
     ground.position.y = 0; // Adjust if needed
     ground.receiveShadow = true;
     scene.add(ground);
     
+    //  Back Wall
+    const backWall = new THREE.Mesh(new THREE.PlaneGeometry(wallWidth, wallHeight), wallMaterial);
+    backWall.position.set(0, wallHeight / 2, -wallWidth / 2);
+    scene.add(backWall);
+    
+    //  Front Wall
+    const frontWall = new THREE.Mesh(new THREE.PlaneGeometry(wallWidth, wallHeight), wallMaterial);
+    frontWall.position.set(0, wallHeight / 2, wallWidth / 2);
+    frontWall.rotation.y = Math.PI;
+    scene.add(frontWall);
+    
+    //  Left Wall
+    const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(wallWidth, wallHeight), wallMaterial);
+    leftWall.rotation.y = Math.PI / 2;
+    leftWall.position.set(-wallWidth / 2, wallHeight / 2, 0);
+    scene.add(leftWall);
+    
+    //  Right Wall
+    const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(wallWidth, wallHeight), wallMaterial);
+    rightWall.rotation.y = -Math.PI / 2;
+    rightWall.position.set(wallWidth / 2, wallHeight / 2, 0);
+    scene.add(rightWall);
+    
+    //  Ceiling
+    const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(wallWidth, wallWidth), ceilingMaterial);
+    ceiling.rotation.x = Math.PI / 2;
+    ceiling.position.y = ceilingHeight; // Keep it at original height
+    scene.add(ceiling);
+    
     renderer.shadowMap.enabled = true;
 }
 function setupGUI(){
     const options = { MoveInCircle: false };
-
+    let selectedModel = modelPaths[modelOptions.Model]; // Get the selected model info
+    
     gui.add(modelOptions, 'Model', Object.keys(modelPaths)).onChange((value) => {
-        loadModel(modelPaths[value]); // Load selected model
+        let selectedModel = modelPaths[value]; // Get the selected model info
+        loadModel(selectedModel.path, selectedModel.height); // Load selected model
     });
+    
     gui.add(options, 'MoveInCircle').onChange((value) => {
         isMoving = value;
         if (isMoving && currentModel) {
@@ -110,10 +150,9 @@ function setupGUI(){
     });
     
     // Load default model
-    loadModel(modelPaths[modelOptions.Model]);
-}
+    loadModel(selectedModel.path, selectedModel.height);}
 
-function loadModel(modelPath) {
+function loadModel(modelPath, groundHeight = 0.1) {
     if (currentModel) {
         scene.remove(currentModel);
         currentModel.traverse((child) => {
@@ -128,7 +167,7 @@ function loadModel(modelPath) {
     loader.load(modelPath, function (gltf) {
         const model = gltf.scene;
         model.scale.set(80, 80, 80); // Scale model by 50 times
-        model.position.set(0, 0.1, 0);
+        model.position.set(0, groundHeight, 0);
         model.traverse((child) => {
             if (child.isMesh) {
                 child.castShadow = true;
@@ -148,7 +187,7 @@ function loadModel(modelPath) {
 }
 
 function render(){
-     requestAnimationFrame(render);
+    requestAnimationFrame(render);
     moveInCircle(); // Move model in a circle
     renderer.render(scene,camera);
 }
@@ -166,7 +205,7 @@ function updateAspectRatio()
 
 function moveInCircle() {
     if (!currentModel || !isMoving) return;
-   
+    
     angle += speed;
     currentModel.position.x = originalPosition.x + Math.cos(angle) * radius;
     currentModel.position.z = originalPosition.z + Math.sin(angle) * radius;
