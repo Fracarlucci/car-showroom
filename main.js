@@ -28,10 +28,11 @@ const modelPaths = {
 };
 
 const lightOptions = {
-    Ambient: true,
+    Ambient: false,
     Ambient_Intensity: 1,
     
-    Directional: true,
+    Directional_1: false,
+    Directional_2: false,
     Directional_Intensity: 1,
     
     Spot_Center: true,
@@ -41,34 +42,19 @@ const lightOptions = {
     Spot_Right: true,
     Spot_Intensity: 10,
     Spot_Angle: 0.6, // Default angle
-    Spot_Penumbra: 0.05, // Soft edges
+    Spot_Penumbra: 0.02, // Soft edges
     Spot_Height: 3.5, // Default height
-    
-    Point_Center: true,
-    Point_FrontLeft: true,
-    Point_FrontRight: true,
-    Point_Back: true,
-    Point_Intensity: 40,
-    Point_Distance: 4, // How far the light reaches
-    Point_Height: 2.5, // Default height
-    Point_X: 0, // Move left/right
-    Point_Z: 0 // Move forward/backward
 };
 
 const ambientLight = new THREE.AmbientLight(0xffffff, lightOptions.Ambient_Intensity);
-const dirLight = new THREE.DirectionalLight(0xffffff, lightOptions.Directional_Intensity);
+const dirLight1 = new THREE.DirectionalLight(0xffffff, 1);
+const dirLight2 = new THREE.DirectionalLight(0xffffff, 1);
 const spotLights = {
     Center: new THREE.SpotLight(0xffffff, lightOptions.Spot_Intensity),
     Front: new THREE.SpotLight(0xffffff, lightOptions.Spot_Intensity),
     Back: new THREE.SpotLight(0xffffff, lightOptions.Spot_Intensity),
     Left: new THREE.SpotLight(0xffffff, lightOptions.Spot_Intensity),
     Right: new THREE.SpotLight(0xffffff, lightOptions.Spot_Intensity),
-};
-const pointLights = {
-    Center: new THREE.PointLight(0xffffff, lightOptions.Point_Intensity, lightOptions.Point_Distance),
-    FrontLeft: new THREE.PointLight(0xffffff, lightOptions.Point_Intensity, lightOptions.Point_Distance),
-    FrontRight: new THREE.PointLight(0xffffff, lightOptions.Point_Intensity, lightOptions.Point_Distance),
-    Back: new THREE.PointLight(0xffffff, lightOptions.Point_Intensity, lightOptions.Point_Distance)
 };
 
 // Acciones
@@ -81,7 +67,6 @@ function init(){
     // Motor de render
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize( window.innerWidth, window.innerHeight );
-    //renderer.setClearColor( new THREE.Color(0x0000AA) );
     document.getElementById('container').appendChild( renderer.domElement );
     
     // Escena
@@ -94,11 +79,18 @@ function init(){
     camera.lookAt( new THREE.Vector3(0,1,0) );
     
     // Lights Setup
+    ambientLight.visible = false;
     scene.add(ambientLight);
 
-    dirLight.position.set(5, 10, 5);
-    dirLight.castShadow = true;
-    scene.add(dirLight);
+    dirLight1.position.set(5, 10, 5);
+    dirLight1.castShadow = true;
+    dirLight1.visible = false; // Start OFF
+    scene.add(dirLight1);
+
+    dirLight2.position.set(-5, 8, -5);
+    dirLight2.castShadow = true;
+    dirLight2.visible = false; // Start OFF
+    scene.add(dirLight2);
 
     // Set SpotLight positions
     spotLights.Center.position.set(0, lightOptions.Spot_Height, 0);
@@ -110,26 +102,12 @@ function init(){
     Object.values(spotLights).forEach(light => {
         light.angle = 0.2;
         light.castShadow = true;
-        // light.target.position.set(0, 2, 0); // Point all lights to the center (0,2,0)
+        light.penumbra = lightOptions.Spot_Penumbra;
         scene.add(light.target);
         scene.add(light);
     });
     spotLights.Center.angle = lightOptions.Spot_Angle;
-    spotLights.Center.penumbra = lightOptions.Spot_Penumbra;
 
-
-
-    pointLights.Center.position.set(0, lightOptions.Point_Height, 0);
-    pointLights.FrontLeft.position.set(-5, lightOptions.Point_Height, 5);
-    pointLights.FrontRight.position.set(5, lightOptions.Point_Height, 5);
-    pointLights.Back.position.set(0, lightOptions.Point_Height, -5);
-    
-    Object.values(pointLights).forEach(light => {
-        light.castShadow = true;
-        light.distance = lightOptions.Point_Distance;
-        scene.add(light);
-    });
-    
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
@@ -285,10 +263,14 @@ function setupGUI(){
     });
 
     gui.add(lightOptions, 'Ambient').onChange(value => ambientLight.visible = value);
-    gui.add(lightOptions, 'Ambient_Intensity', 0, 5).onChange(value => ambientLight.intensity = value);
+    gui.add(lightOptions, 'Ambient_Intensity', 0, 3).onChange(value => ambientLight.intensity = value);
 
-    gui.add(lightOptions, 'Directional').onChange(value => dirLight.visible = value);
-    gui.add(lightOptions, 'Directional_Intensity', 0, 10).onChange(value => dirLight.intensity = value);
+    gui.add(lightOptions, 'Directional_1').onChange(value => dirLight1.visible = value);
+    gui.add(lightOptions, 'Directional_2').onChange(value => dirLight2.visible = value);
+    gui.add(lightOptions, 'Directional_Intensity', 0, 3).onChange(value => {
+        dirLight1.intensity = value;
+        dirLight2.intensity = value;
+    });
 
     // SpotLights Controls
     gui.add(lightOptions, 'Spot_Center').onChange(value => spotLights.Center.visible = value);
@@ -298,15 +280,6 @@ function setupGUI(){
     gui.add(lightOptions, 'Spot_Right').onChange(value => spotLights.Right.visible = value);
     gui.add(lightOptions, 'Spot_Intensity', 0, 200).onChange(value => {
         Object.values(spotLights).forEach(light => light.intensity = value);
-    });
-
-    // PointLights Controls
-    gui.add(lightOptions, 'Point_Center').onChange(value => pointLights.Center.visible = value);
-    gui.add(lightOptions, 'Point_FrontLeft').onChange(value => pointLights.FrontLeft.visible = value);
-    gui.add(lightOptions, 'Point_FrontRight').onChange(value => pointLights.FrontRight.visible = value);
-    gui.add(lightOptions, 'Point_Back').onChange(value => pointLights.Back.visible = value);
-    gui.add(lightOptions, 'Point_Intensity', 0, 50).onChange(value => {
-        Object.values(pointLights).forEach(light => light.intensity = value);
     });
     
     // Load default model
