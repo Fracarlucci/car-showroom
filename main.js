@@ -247,13 +247,19 @@ function loadScene(){
 function setupGUI(){
     const options = { MoveInCircle: false };
     let selectedModel = modelPaths[modelOptions.Model]; // Get the selected model info
+    const modelFolder = gui.addFolder('Model');
+    const lightFolder = gui.addFolder('Lights');
+    const ambientFolder = lightFolder.addFolder('Ambient Light');
+    const directionalFolder = lightFolder.addFolder('Directional Lights');
+    const spotFolder = lightFolder.addFolder('Spot Lights');
+
     
-    gui.add(modelOptions, 'Model', Object.keys(modelPaths)).onChange((value) => {
+    modelFolder.add(modelOptions, 'Model', Object.keys(modelPaths)).onChange((value) => {
         let selectedModel = modelPaths[value]; // Get the selected model info
         loadModel(selectedModel.path, selectedModel.height); // Load selected model
     });
     
-    gui.add(options, 'MoveInCircle').onChange((value) => {
+    modelFolder.add(options, 'MoveInCircle').onChange((value) => {
         isMoving = value;
         if (isMoving && currentModel) {
             // Save the model's initial position when movement starts
@@ -261,31 +267,34 @@ function setupGUI(){
             angle = 0; // Reset angle to start from the same point
         }
     });
-
-    gui.add(lightOptions, 'Ambient').onChange(value => ambientLight.visible = value);
-    gui.add(lightOptions, 'Ambient_Intensity', 0, 3).onChange(value => ambientLight.intensity = value);
-
-    gui.add(lightOptions, 'Directional_1').onChange(value => dirLight1.visible = value);
-    gui.add(lightOptions, 'Directional_2').onChange(value => dirLight2.visible = value);
-    gui.add(lightOptions, 'Directional_Intensity', 0, 3).onChange(value => {
+    
+    
+    // Ambient Light Controls
+    ambientFolder.add(lightOptions, 'Ambient').onChange(value => ambientLight.visible = value);
+    ambientFolder.add(lightOptions, 'Ambient_Intensity', 0, 3).onChange(value => ambientLight.intensity = value);
+    
+    // Directional Light Controls
+    directionalFolder.add(lightOptions, 'Directional_1').onChange(value => dirLight1.visible = value);
+    directionalFolder.add(lightOptions, 'Directional_2').onChange(value => dirLight2.visible = value);
+    directionalFolder.add(lightOptions, 'Directional_Intensity', 0, 3).onChange(value => {
         dirLight1.intensity = value;
         dirLight2.intensity = value;
     });
 
     // SpotLights Controls
-    gui.add(lightOptions, 'Spot_Center').onChange(value => spotLights.Center.visible = value);
-    gui.add(lightOptions, 'Spot_Front').onChange(value => spotLights.Front.visible = value);
-    gui.add(lightOptions, 'Spot_Back').onChange(value => spotLights.Back.visible = value);
-    gui.add(lightOptions, 'Spot_Left').onChange(value => spotLights.Left.visible = value);
-    gui.add(lightOptions, 'Spot_Right').onChange(value => spotLights.Right.visible = value);
-    gui.add(lightOptions, 'Spot_Intensity', 0, 200).onChange(value => {
+    spotFolder.add(lightOptions, 'Spot_Center').onChange(value => spotLights.Center.visible = value);
+    spotFolder.add(lightOptions, 'Spot_Front').onChange(value => spotLights.Front.visible = value);
+    spotFolder.add(lightOptions, 'Spot_Back').onChange(value => spotLights.Back.visible = value);
+    spotFolder.add(lightOptions, 'Spot_Left').onChange(value => spotLights.Left.visible = value);
+    spotFolder.add(lightOptions, 'Spot_Right').onChange(value => spotLights.Right.visible = value);
+    spotFolder.add(lightOptions, 'Spot_Intensity', 0, 200).onChange(value => {
         Object.values(spotLights).forEach(light => light.intensity = value);
     });
-    
+
     // Load default model
     loadModel(selectedModel.path, selectedModel.height);
 }
-    
+
 function loadModel(modelPath, groundHeight = 0.1) {
     if (currentModel) {
         scene.remove(currentModel);
