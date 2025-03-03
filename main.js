@@ -1,5 +1,4 @@
 // Modulos necesarios
-// import { TextureLoader, PlaneGeometry, MeshStandardMaterial, Mesh, RepeatWrapping } from "three";
 import * as THREE from "three";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
@@ -18,33 +17,37 @@ const radius = 5; // Circle size
 const speed = 0.02; // Speed of movement
 let originalPosition = new THREE.Vector3(); // Store the initial position
 
-
 const modelOptions = {
     Model: 'Ferrari 488',
 };
+
 const modelPaths = {
     "Ferrari 488": { path: './models/2016-ferrari-488-gtb/source/2016_ferrari_488_gtb.glb', height: 0.1 },
     "Ferrari F40": { path: './models/1987_ferrari_f40.glb', height: 0 },
     "Ferrari 288 GTO": { path: './models/ferrari_288_gto.glb', height: -1 }
 };
+
 const lightOptions = {
-    // 🌍 Ambient Light
     Ambient: true,
     Ambient_Intensity: 1,
     
-    // ☀️ Directional Light
     Directional: true,
     Directional_Intensity: 1,
     
-    // 🔦 Spot Light
-    Spot: true,
+    Spot_Center: true,
+    Spot_Front: true,
+    Spot_Back: true,
+    Spot_Left: true,
+    Spot_Right: true,
     Spot_Intensity: 10,
     Spot_Angle: 0.6, // Default angle
     Spot_Penumbra: 0.05, // Soft edges
     Spot_Height: 3.5, // Default height
     
-    // 💡 Point Light
-    Point: true,
+    Point_Center: true,
+    Point_FrontLeft: true,
+    Point_FrontRight: true,
+    Point_Back: true,
     Point_Intensity: 40,
     Point_Distance: 4, // How far the light reaches
     Point_Height: 2.5, // Default height
@@ -54,8 +57,19 @@ const lightOptions = {
 
 const ambientLight = new THREE.AmbientLight(0xffffff, lightOptions.Ambient_Intensity);
 const dirLight = new THREE.DirectionalLight(0xffffff, lightOptions.Directional_Intensity);
-const spotLight = new THREE.SpotLight(0xffffff, lightOptions.Spot_Intensity);
-const pointLight = new THREE.PointLight(0xffffff, lightOptions.Point_Intensity, lightOptions.Point_Distance);
+const spotLights = {
+    Center: new THREE.SpotLight(0xffffff, lightOptions.Spot_Intensity),
+    Front: new THREE.SpotLight(0xffffff, lightOptions.Spot_Intensity),
+    Back: new THREE.SpotLight(0xffffff, lightOptions.Spot_Intensity),
+    Left: new THREE.SpotLight(0xffffff, lightOptions.Spot_Intensity),
+    Right: new THREE.SpotLight(0xffffff, lightOptions.Spot_Intensity),
+};
+const pointLights = {
+    Center: new THREE.PointLight(0xffffff, lightOptions.Point_Intensity, lightOptions.Point_Distance),
+    FrontLeft: new THREE.PointLight(0xffffff, lightOptions.Point_Intensity, lightOptions.Point_Distance),
+    FrontRight: new THREE.PointLight(0xffffff, lightOptions.Point_Intensity, lightOptions.Point_Distance),
+    Back: new THREE.PointLight(0xffffff, lightOptions.Point_Intensity, lightOptions.Point_Distance)
+};
 
 // Acciones
 init();
@@ -79,22 +93,42 @@ function init(){
     camera.position.set( 0.5, 2, 7 );
     camera.lookAt( new THREE.Vector3(0,1,0) );
     
-    
-// 🚀 Lights Setup
+    // Lights Setup
     scene.add(ambientLight);
 
     dirLight.position.set(5, 10, 5);
     dirLight.castShadow = true;
     scene.add(dirLight);
 
-    spotLight.position.set(0, lightOptions.Spot_Height, 0);
-    spotLight.angle = lightOptions.Spot_Angle;
-    spotLight.penumbra = lightOptions.Spot_Penumbra;
-    spotLight.castShadow = true;
-    scene.add(spotLight);
+    // Set SpotLight positions
+    spotLights.Center.position.set(0, lightOptions.Spot_Height, 0);
+    spotLights.Front.position.set(0, 5, 9.9);  // Slightly in front of the back wall
+    spotLights.Back.position.set(0, 5, -9.9);  // Slightly in front of the front wall
+    spotLights.Left.position.set(-9.9, 5, 0);  // Slightly in front of the right wall
+    spotLights.Right.position.set(9.9, 5, 0);  // Slightly in front of the left wall
 
-    pointLight.position.set(lightOptions.Point_X, lightOptions.Point_Height, lightOptions.Point_Z);
-    scene.add(pointLight);
+    Object.values(spotLights).forEach(light => {
+        light.angle = 0.2;
+        light.castShadow = true;
+        // light.target.position.set(0, 2, 0); // Point all lights to the center (0,2,0)
+        scene.add(light.target);
+        scene.add(light);
+    });
+    spotLights.Center.angle = lightOptions.Spot_Angle;
+    spotLights.Center.penumbra = lightOptions.Spot_Penumbra;
+
+
+
+    pointLights.Center.position.set(0, lightOptions.Point_Height, 0);
+    pointLights.FrontLeft.position.set(-5, lightOptions.Point_Height, 5);
+    pointLights.FrontRight.position.set(5, lightOptions.Point_Height, 5);
+    pointLights.Back.position.set(0, lightOptions.Point_Height, -5);
+    
+    Object.values(pointLights).forEach(light => {
+        light.castShadow = true;
+        light.distance = lightOptions.Point_Distance;
+        scene.add(light);
+    });
     
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
@@ -115,7 +149,7 @@ function init(){
 
 function loadScene(){ 
     
-    // 📺 Create a video element for the portrait TV
+    // Create a video element for the portrait TV
     const video1 = document.createElement('video');
     video1.src = './videos/portrait.mp4'; // Change to your video file
     video1.loop = true;
@@ -123,13 +157,13 @@ function loadScene(){
     video1.autoplay = true;
     video1.play();
 
-    // 🎥 Create a video texture
+    // Create a video texture
     const videoTexture1 = new THREE.VideoTexture(video1);
     videoTexture1.minFilter = THREE.LinearFilter;
     videoTexture1.magFilter = THREE.LinearFilter;
     videoTexture1.format = THREE.RGBFormat;
 
-    // 🖥️ Create portrait-style TV screen
+    // Create portrait-style TV screen
     const portraitTV = new THREE.Mesh(
         new THREE.PlaneGeometry(2, 3), // **Portrait: taller than wide**
         new THREE.MeshBasicMaterial({ map: videoTexture1 })
@@ -137,7 +171,7 @@ function loadScene(){
     portraitTV.position.set(-3, 2.5, -9.9); // Move left for spacing
     scene.add(portraitTV);
 
-    // 🖼️ Add a black frame for the portrait TV
+    // Add a black frame for the portrait TV
     const portraitFrame = new THREE.Mesh(
         new THREE.PlaneGeometry(2.2, 3.2), // Slightly bigger than TV
         new THREE.MeshBasicMaterial({ color: 0x000000 })
@@ -146,7 +180,7 @@ function loadScene(){
     scene.add(portraitFrame);
 
 
-    // 📺 Create a video element for the landscape TV
+    // Create a video element for the landscape TV
     const video2 = document.createElement('video');
     video2.src = './videos/intern_landscape.mp4'; // Change to your second video file
     video2.loop = true;
@@ -154,13 +188,13 @@ function loadScene(){
     video2.autoplay = true;
     video2.play();
 
-    // 🎥 Create a video texture
+    // Create a video texture
     const videoTexture2 = new THREE.VideoTexture(video2);
     videoTexture2.minFilter = THREE.LinearFilter;
     videoTexture2.magFilter = THREE.LinearFilter;
     videoTexture2.format = THREE.RGBFormat;
 
-    // 🖥️ Create landscape-style TV screen
+    // Create landscape-style TV screen
     const landscapeTV = new THREE.Mesh(
         new THREE.PlaneGeometry(3.5, 2), // **Landscape: wider than tall**
         new THREE.MeshBasicMaterial({ map: videoTexture2 })
@@ -168,7 +202,7 @@ function loadScene(){
     landscapeTV.position.set(3, 2.5, -9.9); // Move right for spacing
     scene.add(landscapeTV);
 
-    // 🖼️ Add a black frame for the landscape TV
+    // Add a black frame for the landscape TV
     const landscapeFrame = new THREE.Mesh(
         new THREE.PlaneGeometry(3.7, 2.2), // Slightly bigger than TV
         new THREE.MeshBasicMaterial({ color: 0x000000 })
@@ -251,19 +285,29 @@ function setupGUI(){
     });
 
     gui.add(lightOptions, 'Ambient').onChange(value => ambientLight.visible = value);
-gui.add(lightOptions, 'Ambient_Intensity', 0, 5).onChange(value => ambientLight.intensity = value);
+    gui.add(lightOptions, 'Ambient_Intensity', 0, 5).onChange(value => ambientLight.intensity = value);
 
-gui.add(lightOptions, 'Directional').onChange(value => dirLight.visible = value);
-gui.add(lightOptions, 'Directional_Intensity', 0, 10).onChange(value => dirLight.intensity = value);
+    gui.add(lightOptions, 'Directional').onChange(value => dirLight.visible = value);
+    gui.add(lightOptions, 'Directional_Intensity', 0, 10).onChange(value => dirLight.intensity = value);
 
-// 🔦 Spot Light Controls
-gui.add(lightOptions, 'Spot').onChange(value => spotLight.visible = value);
-gui.add(lightOptions, 'Spot_Intensity', 0, 50).onChange(value => spotLight.intensity = value);
+    // SpotLights Controls
+    gui.add(lightOptions, 'Spot_Center').onChange(value => spotLights.Center.visible = value);
+    gui.add(lightOptions, 'Spot_Front').onChange(value => spotLights.Front.visible = value);
+    gui.add(lightOptions, 'Spot_Back').onChange(value => spotLights.Back.visible = value);
+    gui.add(lightOptions, 'Spot_Left').onChange(value => spotLights.Left.visible = value);
+    gui.add(lightOptions, 'Spot_Right').onChange(value => spotLights.Right.visible = value);
+    gui.add(lightOptions, 'Spot_Intensity', 0, 200).onChange(value => {
+        Object.values(spotLights).forEach(light => light.intensity = value);
+    });
 
-// 💡 Point Light Controls
-gui.add(lightOptions, 'Point').onChange(value => pointLight.visible = value);
-gui.add(lightOptions, 'Point_Intensity', 0, 50).onChange(value => pointLight.intensity = value);
-
+    // PointLights Controls
+    gui.add(lightOptions, 'Point_Center').onChange(value => pointLights.Center.visible = value);
+    gui.add(lightOptions, 'Point_FrontLeft').onChange(value => pointLights.FrontLeft.visible = value);
+    gui.add(lightOptions, 'Point_FrontRight').onChange(value => pointLights.FrontRight.visible = value);
+    gui.add(lightOptions, 'Point_Back').onChange(value => pointLights.Back.visible = value);
+    gui.add(lightOptions, 'Point_Intensity', 0, 50).onChange(value => {
+        Object.values(pointLights).forEach(light => light.intensity = value);
+    });
     
     // Load default model
     loadModel(selectedModel.path, selectedModel.height);
