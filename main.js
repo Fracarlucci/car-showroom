@@ -27,6 +27,32 @@ const modelPaths = {
     "Ferrari 288 GTO": { path: './models/ferrari_288_gto.glb', height: -1 }
 };
 
+// TV setup
+const video1 = document.createElement('video');
+const video2 = document.createElement('video');
+const videoTexture1 = new THREE.VideoTexture(video1);
+const videoTexture2 = new THREE.VideoTexture(video2);
+const portraitTV = new THREE.Mesh(
+    new THREE.PlaneGeometry(2, 3),
+    new THREE.MeshBasicMaterial({ map: videoTexture1 })
+);
+const landscapeTV = new THREE.Mesh(
+    new THREE.PlaneGeometry(3.5, 2),
+    new THREE.MeshBasicMaterial({ map: videoTexture2 })
+);
+
+const masterTVOptions = {
+    TV_On: true,
+    Play_Both_Videos: () => {
+        video1.play();
+        video2.play();
+    },
+    Pause_Both_Videos: () => {
+        video1.pause();
+        video2.pause();
+    }
+};
+
 const lightOptions = {
     Ambient: false,
     Ambient_Intensity: 1,
@@ -128,24 +154,17 @@ function init(){
 function loadScene(){ 
     
     // Create a video element for the portrait TV
-    const video1 = document.createElement('video');
-    video1.src = './videos/portrait.mp4'; // Change to your video file
+    video1.src = './videos/portrait.mp4';
     video1.loop = true;
     video1.muted = true;
     video1.autoplay = true;
     video1.play();
 
     // Create a video texture
-    const videoTexture1 = new THREE.VideoTexture(video1);
     videoTexture1.minFilter = THREE.LinearFilter;
     videoTexture1.magFilter = THREE.LinearFilter;
     videoTexture1.format = THREE.RGBFormat;
 
-    // Create portrait-style TV screen
-    const portraitTV = new THREE.Mesh(
-        new THREE.PlaneGeometry(2, 3), // **Portrait: taller than wide**
-        new THREE.MeshBasicMaterial({ map: videoTexture1 })
-    );
     portraitTV.position.set(-3, 2.5, -9.9); // Move left for spacing
     scene.add(portraitTV);
 
@@ -157,26 +176,18 @@ function loadScene(){
     portraitFrame.position.set(-3, 2.5, -9.95);
     scene.add(portraitFrame);
 
-
     // Create a video element for the landscape TV
-    const video2 = document.createElement('video');
-    video2.src = './videos/intern_landscape.mp4'; // Change to your second video file
+    video2.src = './videos/intern_landscape.mp4';
     video2.loop = true;
     video2.muted = true;
     video2.autoplay = true;
     video2.play();
 
     // Create a video texture
-    const videoTexture2 = new THREE.VideoTexture(video2);
     videoTexture2.minFilter = THREE.LinearFilter;
     videoTexture2.magFilter = THREE.LinearFilter;
     videoTexture2.format = THREE.RGBFormat;
 
-    // Create landscape-style TV screen
-    const landscapeTV = new THREE.Mesh(
-        new THREE.PlaneGeometry(3.5, 2), // **Landscape: wider than tall**
-        new THREE.MeshBasicMaterial({ map: videoTexture2 })
-    );
     landscapeTV.position.set(3, 2.5, -9.9); // Move right for spacing
     scene.add(landscapeTV);
 
@@ -188,7 +199,6 @@ function loadScene(){
     landscapeFrame.position.set(3, 2.5, -9.95);
     scene.add(landscapeFrame);
 
-    
     const textureLoader = new THREE.TextureLoader();
     const wallTexture = textureLoader.load('./textures/wall.jpg'); // Change path to your wall texture
     const groundTexture = textureLoader.load('./textures/floor2.jpg'); // Change this path!
@@ -252,7 +262,7 @@ function setupGUI(){
     const ambientFolder = lightFolder.addFolder('Ambient Light');
     const directionalFolder = lightFolder.addFolder('Directional Lights');
     const spotFolder = lightFolder.addFolder('Spot Lights');
-
+    const masterTVFolder = gui.addFolder('Master TV Controls');
     
     modelFolder.add(modelOptions, 'Model', Object.keys(modelPaths)).onChange((value) => {
         let selectedModel = modelPaths[value]; // Get the selected model info
@@ -267,7 +277,14 @@ function setupGUI(){
             angle = 0; // Reset angle to start from the same point
         }
     });
-    
+
+    // Play/Pause both videos
+    masterTVFolder.add(masterTVOptions, 'Play_Both_Videos');
+    masterTVFolder.add(masterTVOptions, 'Pause_Both_Videos');
+    masterTVFolder.add(masterTVOptions, 'TV_On').onChange(value => {
+        portraitTV.visible = value;
+        landscapeTV.visible = value;
+    });
     
     // Ambient Light Controls
     ambientFolder.add(lightOptions, 'Ambient').onChange(value => ambientLight.visible = value);
