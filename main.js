@@ -12,6 +12,7 @@ const loader = new GLTFLoader();
 const gui = new GUI();
 let currentModel = null; // Store the current model
 let isMoving = false; // Toggle movement
+let isRotating = false; // Toggle rotation
 let angle = 0; // Initial angle
 const radius = 5; // Circle size
 const speed = 0.02; // Speed of movement
@@ -106,6 +107,7 @@ function init(){
     
     // Lights Setup
     ambientLight.visible = false;
+    ambientLight.castShadow = true;
     scene.add(ambientLight);
 
     dirLight1.position.set(5, 10, 5);
@@ -148,7 +150,6 @@ function init(){
     renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Softer shadows
     
     window.addEventListener('resize', updateAspectRatio );
-    
 }
 
 function loadScene(){ 
@@ -255,9 +256,10 @@ function loadScene(){
 }
 
 function setupGUI(){
-    const options = { MoveInCircle: false };
+    const options = { "Selected animation": "None",};
     let selectedModel = modelPaths[modelOptions.Model]; // Get the selected model info
     const modelFolder = gui.addFolder('Model');
+    const animationFolder = gui.addFolder('Animation');
     const lightFolder = gui.addFolder('Lights');
     const ambientFolder = lightFolder.addFolder('Ambient Light');
     const directionalFolder = lightFolder.addFolder('Directional Lights');
@@ -269,12 +271,20 @@ function setupGUI(){
         loadModel(selectedModel.path, selectedModel.height); // Load selected model
     });
     
-    modelFolder.add(options, 'MoveInCircle').onChange((value) => {
-        isMoving = value;
-        if (isMoving && currentModel) {
-            // Save the model's initial position when movement starts
-            originalPosition.copy(currentModel.position);
-            angle = 0; // Reset angle to start from the same point
+    // Animation Controls
+    animationFolder.add(options, 'Selected animation', ["None", "Move in circle", "Rotate"]).onChange((value) => {
+        currentModel.rotation.y = 0;
+        currentModel.position.x = originalPosition.x; // Reset position
+        currentModel.position.z = originalPosition.z;
+        if (value === "None") {
+            isMoving = false;
+            isRotating = false;
+        } else if (value === "Move in circle") {
+            isMoving = true;
+            isRotating = false;
+        } else if (value === "Rotate") {
+            isMoving = false;
+            isRotating = true;
         }
     });
 
@@ -328,6 +338,7 @@ function loadModel(modelPath, groundHeight = 0.1) {
         const model = gltf.scene;
         model.scale.set(80, 80, 80); // Scale model by 50 times
         model.position.set(0, groundHeight, 0);
+        originalPosition = model.position.clone(); // Store initial position
         model.traverse((child) => {
             if (child.isMesh) {
                 child.castShadow = true;
@@ -345,14 +356,6 @@ function loadModel(modelPath, groundHeight = 0.1) {
     }
     );
 }
-    
-function render(){
-    requestAnimationFrame(render);
-    moveInCircle(); // Move model in a circle
-    renderer.render(scene,camera);
-}
-
-function update(){}
 
 function updateAspectRatio()
 {
@@ -361,10 +364,20 @@ function updateAspectRatio()
     camera.aspect = ar;
     camera.updateProjectionMatrix();
 }
+    
+function render(){
+    requestAnimationFrame(render);
+    update();
+    renderer.render(scene,camera);
+}
 
+function update(){
+    if(isMoving) moveInCircle();
+    else if(isRotating) rotate();
+}
 
 function moveInCircle() {
-    if (!currentModel || !isMoving) return;
+    if (!currentModel || !isMoving || isRotating) return;
     
     angle += speed;
     currentModel.position.x = originalPosition.x + Math.cos(angle) * radius;
@@ -372,3 +385,9 @@ function moveInCircle() {
     currentModel.rotation.y = -angle; // Rotate to face movement direction
 }
 
+function rotate() {
+    if (!currentModel || isMoving || !isRotating) return;
+    currentModel.position.x = originalPosition.x;
+    currentModel.position.z = originalPosition.z;
+    currentModel.rotation.y += 0.01;
+}
