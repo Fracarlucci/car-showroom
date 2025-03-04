@@ -264,6 +264,7 @@ function setupGUI(){
     const ambientFolder = lightFolder.addFolder('Ambient Light');
     const directionalFolder = lightFolder.addFolder('Directional Lights');
     const spotFolder = lightFolder.addFolder('Spot Lights');
+    const centralSpotFolder = spotFolder.addFolder('Central Spotlight');
     const masterTVFolder = gui.addFolder('Master TV Controls');
     
     modelFolder.add(modelOptions, 'Model', Object.keys(modelPaths)).onChange((value) => {
@@ -274,7 +275,7 @@ function setupGUI(){
     // Animation Controls
     animationFolder.add(options, 'Selected animation', ["None", "Move in circle", "Rotate"]).onChange((value) => {
         currentModel.rotation.y = 0;
-        currentModel.position.x = originalPosition.x; // Reset position
+        currentModel.position.x = originalPosition.x;
         currentModel.position.z = originalPosition.z;
         if (value === "None") {
             isMoving = false;
@@ -309,7 +310,6 @@ function setupGUI(){
     });
 
     // SpotLights Controls
-    spotFolder.add(lightOptions, 'Spot_Center').onChange(value => spotLights.Center.visible = value);
     spotFolder.add(lightOptions, 'Spot_Front').onChange(value => spotLights.Front.visible = value);
     spotFolder.add(lightOptions, 'Spot_Back').onChange(value => spotLights.Back.visible = value);
     spotFolder.add(lightOptions, 'Spot_Left').onChange(value => spotLights.Left.visible = value);
@@ -317,6 +317,23 @@ function setupGUI(){
     spotFolder.add(lightOptions, 'Spot_Intensity', 0, 200).onChange(value => {
         Object.values(spotLights).forEach(light => light.intensity = value);
     });
+    
+    
+    centralSpotFolder.add(lightOptions, 'Spot_Center').onChange(value => spotLights.Center.visible = value);
+    const targetXControl = centralSpotFolder.add(spotLights.Center.target.position, 'x', -10, 10).name('Move central spotlight X');
+    const targetYControl = centralSpotFolder.add(spotLights.Center.target.position, 'z', -10, 10).name('Move central spotlight Z');
+    const targetZControl = centralSpotFolder.add(spotLights.Center, 'angle', 0, Math.PI / 2).name('Central spotlight angle').onChange(value => {
+        spotLights.Center.angle = value;
+    });
+    //  reset center spotlight
+    centralSpotFolder.add({ reset: () => {
+        spotLights.Center.position.set(0, lightOptions.Spot_Height, 0);
+        spotLights.Center.target.position.set(0, 0, 0);
+        spotLights.Center.angle = lightOptions.Spot_Angle;
+        targetXControl.updateDisplay();
+        targetYControl.updateDisplay();
+        targetZControl.updateDisplay();
+    }}, 'reset').name('Reset central spotlight');
 
     // Load default model
     loadModel(selectedModel.path, selectedModel.height);
