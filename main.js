@@ -145,10 +145,9 @@ function init(){
     controls.minPolarAngle = 0;
     controls.update();
     
-    
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Softer shadows
-    
+
     window.addEventListener('resize', updateAspectRatio );
 }
 
@@ -364,6 +363,7 @@ function loadModel(modelPath, groundHeight = 0.1) {
         });
         scene.add(model)
         currentModel = model; // Store current model for future removal
+        initClickSound();
     },
     function (xhr) {
         console.log(`Model ${(xhr.loaded / xhr.total) * 100}% loaded`);
@@ -372,6 +372,39 @@ function loadModel(modelPath, groundHeight = 0.1) {
         console.error('An error happened', error);
     }
     );
+}
+
+function initClickSound() {
+    // Load an audio file
+    const listener = new THREE.AudioListener();
+    camera.add(listener); // Attach the listener to the camera
+
+    const sound = new THREE.Audio(listener);
+    const audioLoader = new THREE.AudioLoader();
+    audioLoader.load('./sounds/sound.mp3', function(buffer) {
+        sound.setBuffer(buffer);
+        sound.setVolume(1.0);
+    });
+
+    // Raycaster for detecting clicks
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    // Detect clicks ONLY on the imported GLTF model
+    window.addEventListener('click', function(event) {
+        if (!currentModel) return; // Ensure the model is loaded
+
+        // Convert mouse position to normalized device coordinates (-1 to +1)
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObject(currentModel, true); // Check all children too
+
+        if (intersects.length > 0) {
+            sound.play(); // Play sound if clicking on the car
+        }
+    });
 }
 
 function updateAspectRatio()
