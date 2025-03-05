@@ -36,6 +36,12 @@ const modelPaths = {
     },
 };
 
+const options = {
+    SelectedAnimation: "None",
+    Speed: 0.02, // Default speed
+    RotateClockwise: true
+};
+
 // TV setup
 const video1 = document.createElement('video');
 const video2 = document.createElement('video');
@@ -263,7 +269,6 @@ function loadScene(){
 }
 
 function setupGUI(){
-    const options = { "Selected animation": "None",};
     let selectedModel = modelPaths[modelOptions.Model]; // Get the selected model info
     const modelFolder = gui.addFolder('Model');
     const animationFolder = gui.addFolder('Animation');
@@ -280,10 +285,11 @@ function setupGUI(){
     });
     
     // Animation Controls
-    animationFolder.add(options, 'Selected animation', ["None", "Move in circle", "Rotate"]).onChange((value) => {
+    animationFolder.add(options, 'SelectedAnimation', ["None", "Move in circle", "Rotate"]).onChange((value) => {
         currentModel.rotation.y = 0;
         currentModel.position.x = originalPosition.x;
         currentModel.position.z = originalPosition.z;
+    
         if (value === "None") {
             isMoving = false;
             isRotating = false;
@@ -295,6 +301,10 @@ function setupGUI(){
             isRotating = true;
         }
     });
+    
+    // Allow users to set speed and rotation direction
+    animationFolder.add(options, 'Speed', 0, 0.1).name('Animation Speed');
+    animationFolder.add(options, 'RotateClockwise').name('Clockwise Rotation');
 
     // Play/Pause both videos
     masterTVFolder.add(masterTVOptions, 'Play_Both_Videos');
@@ -325,14 +335,15 @@ function setupGUI(){
         Object.values(spotLights).forEach(light => light.intensity = value);
     });
     
-    
+    // Central Spotlight Controls
     centralSpotFolder.add(lightOptions, 'Spot_Center').onChange(value => spotLights.Center.visible = value);
     const targetXControl = centralSpotFolder.add(spotLights.Center.target.position, 'x', -10, 10).name('Move central spotlight X');
     const targetYControl = centralSpotFolder.add(spotLights.Center.target.position, 'z', -10, 10).name('Move central spotlight Z');
     const targetZControl = centralSpotFolder.add(spotLights.Center, 'angle', 0, Math.PI / 2).name('Central spotlight angle').onChange(value => {
         spotLights.Center.angle = value;
     });
-    //  reset center spotlight
+
+    // Reset center spotlight
     centralSpotFolder.add({ reset: () => {
         spotLights.Center.position.set(0, lightOptions.Spot_Height, 0);
         spotLights.Center.target.position.set(0, 0, 0);
@@ -447,16 +458,19 @@ function update(){
 
 function moveInCircle() {
     if (!currentModel || !isMoving || isRotating) return;
-    
-    angle += speed;
+
+    angle += options.Speed;
     currentModel.position.x = originalPosition.x + Math.cos(angle) * radius;
     currentModel.position.z = originalPosition.z + Math.sin(angle) * radius;
-    currentModel.rotation.y = -angle; // Rotate to face movement direction
+    currentModel.rotation.y = -angle;
 }
 
 function rotate() {
     if (!currentModel || isMoving || !isRotating) return;
+
     currentModel.position.x = originalPosition.x;
     currentModel.position.z = originalPosition.z;
-    currentModel.rotation.y += 0.01;
+
+    const direction = options.RotateClockwise ? 1 : -1; // Clockwise or Counterclockwise
+    currentModel.rotation.y += options.Speed * direction;
 }
