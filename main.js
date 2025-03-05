@@ -15,9 +15,9 @@ let isMoving = false; // Toggle movement
 let isRotating = false; // Toggle rotation
 let angle = 0; // Initial angle
 const radius = 5; // Circle size
-const speed = 0.02; // Speed of movement
 let originalPosition = new THREE.Vector3(); // Store the initial position
 let clickHandler = null;
+let carGroup = null;
 
 const modelOptions = {
     Model: 'Ferrari 488',
@@ -121,7 +121,6 @@ function init(){
     
     // Lights Setup
     ambientLight.visible = false;
-    ambientLight.castShadow = true;
     scene.add(ambientLight);
 
     dirLight1.position.set(5, 10, 5);
@@ -359,7 +358,7 @@ function setupGUI(){
 
 function loadModel(modelPath, groundHeight=0.1, soundPath) {
     if (currentModel) {
-        scene.remove(currentModel);
+        scene.remove(carGroup)
         currentModel.traverse((child) => {
             if (child.isMesh) {
                 child.geometry.dispose(); // Free memory
@@ -372,19 +371,23 @@ function loadModel(modelPath, groundHeight=0.1, soundPath) {
     loader.load(
         modelPath,
         function (gltf) {
-            const model = gltf.scene;
-            model.scale.set(80, 80, 80); // Scale model by 50 times
-            model.position.set(0, groundHeight, 0);
-            originalPosition = model.position.clone(); // Store initial position
-            model.traverse((child) => {
+            currentModel = gltf.scene;
+            currentModel.scale.set(80, 80, 80); // Scale model by 50 times
+            currentModel.position.set(0, groundHeight, 0);
+            originalPosition = currentModel.position.clone(); // Store initial position
+            currentModel.traverse((child) => {
                 if (child.isMesh) {
                     child.castShadow = true;
                     child.receiveShadow = true;
                 }
             });
-            scene.add(model)
-            currentModel = model;
+            carGroup = new THREE.Group();
+            carGroup.add(currentModel); // Add car as a child
+            scene.add(carGroup);
+
+            currentModel = carGroup;
             initClickSound(soundPath);
+            addHeadlights(carGroup);
         },
         function (xhr) {
             console.log(`Model ${(xhr.loaded / xhr.total) * 100}% loaded`);
@@ -393,6 +396,42 @@ function loadModel(modelPath, groundHeight=0.1, soundPath) {
             console.error(error);
         }
     );
+}
+
+function addHeadlights(car) {
+    if (!(car instanceof THREE.Object3D)) {
+        console.error("Error: Car is not a THREE.Object3D");
+        return;
+    }
+
+    const headlightIntensity = 50;  
+    const headlightDistance = 100;  
+    const headlightAngle = Math.PI / 6; // Narrow beam like real headlights
+
+    // Left Headlight
+    const leftLight = new THREE.SpotLight(0xffffff, headlightIntensity, headlightDistance, headlightAngle);
+    leftLight.position.set(-1, 1, 1.5); // Adjust position to match car's headlights
+    leftLight.penumbra = 1; // Soft edges
+    leftLight.castShadow = true;
+    leftLight.angle = Math.PI / 4;
+
+    // Right Headlight
+    const rightLight = new THREE.SpotLight(0xffffff, headlightIntensity, headlightDistance, headlightAngle);
+    rightLight.position.set(1, 1, 1.5);
+    rightLight.castShadow = true;
+
+    // Target for headlights (a bit in front of the car)
+    const lightTarget = new THREE.Object3D();
+    lightTarget.position.set(0, 1, 10); // Place in front of the car
+    rightLight.angle = Math.PI / 4;
+    rightLight.penumbra = 1; // Soft edges
+    car.add(lightTarget); // Attach target to the car
+
+    leftLight.target = lightTarget;
+    rightLight.target = lightTarget;
+
+    car.add(leftLight);
+    car.add(rightLight);
 }
 
 function initClickSound(soundPath) {
