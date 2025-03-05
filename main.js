@@ -17,15 +17,23 @@ let angle = 0; // Initial angle
 const radius = 5; // Circle size
 const speed = 0.02; // Speed of movement
 let originalPosition = new THREE.Vector3(); // Store the initial position
+let clickHandler = null;
 
 const modelOptions = {
     Model: 'Ferrari 488',
 };
 
 const modelPaths = {
-    "Ferrari 488": { path: './models/2016-ferrari-488-gtb/source/2016_ferrari_488_gtb.glb', height: 0.1 },
-    "Ferrari F40": { path: './models/1987_ferrari_f40.glb', height: 0 },
-    "Ferrari 288 GTO": { path: './models/ferrari_288_gto.glb', height: -1 }
+    "Ferrari 488": {
+        path: './models/2016-ferrari-488-gtb/source/2016_ferrari_488_gtb.glb',
+        height: 0.1,
+        sound: './sounds/ferrari_488.mp3'
+    },
+    "Ferrari F40": {
+        path: './models/1987_ferrari_f40.glb',
+        height: 0,
+        sound: './sounds/ferrari_f40.mp3'
+    },
 };
 
 // TV setup
@@ -268,7 +276,7 @@ function setupGUI(){
     
     modelFolder.add(modelOptions, 'Model', Object.keys(modelPaths)).onChange((value) => {
         let selectedModel = modelPaths[value]; // Get the selected model info
-        loadModel(selectedModel.path, selectedModel.height); // Load selected model
+        loadModel(selectedModel.path, selectedModel.height, selectedModel.sound); // Load selected model
     });
     
     // Animation Controls
@@ -335,10 +343,10 @@ function setupGUI(){
     }}, 'reset').name('Reset central spotlight');
 
     // Load default model
-    loadModel(selectedModel.path, selectedModel.height);
+    loadModel(selectedModel.path, selectedModel.height, selectedModel.sound);
 }
 
-function loadModel(modelPath, groundHeight = 0.1) {
+function loadModel(modelPath, groundHeight=0.1, soundPath) {
     if (currentModel) {
         scene.remove(currentModel);
         currentModel.traverse((child) => {
@@ -350,38 +358,47 @@ function loadModel(modelPath, groundHeight = 0.1) {
         currentModel = null;
     }
     
-    loader.load(modelPath, function (gltf) {
-        const model = gltf.scene;
-        model.scale.set(80, 80, 80); // Scale model by 50 times
-        model.position.set(0, groundHeight, 0);
-        originalPosition = model.position.clone(); // Store initial position
-        model.traverse((child) => {
-            if (child.isMesh) {
-                child.castShadow = true;
-                child.receiveShadow = true;
-            }
-        });
-        scene.add(model)
-        currentModel = model; // Store current model for future removal
-        initClickSound();
-    },
-    function (xhr) {
-        console.log(`Model ${(xhr.loaded / xhr.total) * 100}% loaded`);
-    },
-    function (error) {
-        console.error('An error happened', error);
-    }
+    loader.load(
+        modelPath,
+        function (gltf) {
+            const model = gltf.scene;
+            model.scale.set(80, 80, 80); // Scale model by 50 times
+            model.position.set(0, groundHeight, 0);
+            originalPosition = model.position.clone(); // Store initial position
+            model.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+            scene.add(model)
+            currentModel = model;
+            initClickSound(soundPath);
+        },
+        function (xhr) {
+            console.log(`Model ${(xhr.loaded / xhr.total) * 100}% loaded`);
+        },
+        function (error) {
+            console.error(error);
+        }
     );
 }
 
-function initClickSound() {
+function initClickSound(soundPath) {
+    if (!soundPath) return; // No sound assigned
+
+    // Remove previous event listener (if exists)
+    if (clickHandler) {
+        window.removeEventListener('click', clickHandler);
+    }
+    
     // Load an audio file
     const listener = new THREE.AudioListener();
     camera.add(listener); // Attach the listener to the camera
 
     const sound = new THREE.Audio(listener);
     const audioLoader = new THREE.AudioLoader();
-    audioLoader.load('./sounds/sound.mp3', function(buffer) {
+    audioLoader.load(soundPath, function(buffer) {
         sound.setBuffer(buffer);
         sound.setVolume(1.0);
     });
@@ -391,20 +408,22 @@ function initClickSound() {
     const mouse = new THREE.Vector2();
 
     // Detect clicks ONLY on the imported GLTF model
-    window.addEventListener('click', function(event) {
-        if (!currentModel) return; // Ensure the model is loaded
+    clickHandler = function(event) {
+        if (!currentModel) return;
 
-        // Convert mouse position to normalized device coordinates (-1 to +1)
         mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
         raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObject(currentModel, true); // Check all children too
+        const intersects = raycaster.intersectObject(currentModel, true);
 
         if (intersects.length > 0) {
-            sound.play(); // Play sound if clicking on the car
+            sound.play(); // Play the sound of the selected car
         }
-    });
+    };
+
+    // Add new click event listener
+    window.addEventListener('click', clickHandler);
 }
 
 function updateAspectRatio()
