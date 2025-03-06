@@ -517,7 +517,7 @@ function update(){
 function moveInCircle() {
     if (!currentModel || !isMoving || isRotating) return;
 
-    angle += options.Speed;
+    angle += animationsOptions.Speed;
     currentModel.position.x = originalPosition.x + Math.cos(angle) * radius;
     currentModel.position.z = originalPosition.z + Math.sin(angle) * radius;
     currentModel.rotation.y = -angle;
@@ -529,6 +529,6 @@ function rotate() {
     currentModel.position.x = originalPosition.x;
     currentModel.position.z = originalPosition.z;
 
-    const direction = options.RotateClockwise ? 1 : -1; // Clockwise or Counterclockwise
-    currentModel.rotation.y += options.Speed * direction;
+    const direction = animationsOptions.RotateClockwise ? 1 : -1; // Clockwise or Counterclockwise
+    currentModel.rotation.y += animationsOptions.Speed * direction;
 }
