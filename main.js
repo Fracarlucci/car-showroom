@@ -36,7 +36,11 @@ const modelPaths = {
     },
 };
 
-const options = {
+const headlightsOptions = { Headlights: false };
+let leftLight = null;
+let rightLight = null;
+
+const animationsOptions = {
     SelectedAnimation: "None",
     Speed: 0.02, // Default speed
     RotateClockwise: true
@@ -271,7 +275,7 @@ function setupGUI(){
     let selectedModel = modelPaths[modelOptions.Model]; // Get the selected model info
     const modelFolder = gui.addFolder('Model');
     const animationFolder = gui.addFolder('Animation');
-    const lightFolder = gui.addFolder('Lights');
+    const lightFolder = gui.addFolder('Extern lights');
     const ambientFolder = lightFolder.addFolder('Ambient Light');
     const directionalFolder = lightFolder.addFolder('Directional Lights');
     const spotFolder = lightFolder.addFolder('Spot Lights');
@@ -282,9 +286,14 @@ function setupGUI(){
         let selectedModel = modelPaths[value]; // Get the selected model info
         loadModel(selectedModel.path, selectedModel.height, selectedModel.sound); // Load selected model
     });
+
+    modelFolder.add(headlightsOptions, 'Headlights').onChange(value => { 
+        leftLight.visible = value;
+        rightLight.visible = value;
+    });
     
     // Animation Controls
-    animationFolder.add(options, 'SelectedAnimation', ["None", "Move in circle", "Rotate"]).onChange((value) => {
+    animationFolder.add(animationsOptions, 'SelectedAnimation', ["None", "Move in circle", "Rotate"]).onChange((value) => {
         currentModel.rotation.y = 0;
         currentModel.position.x = originalPosition.x;
         currentModel.position.z = originalPosition.z;
@@ -302,8 +311,8 @@ function setupGUI(){
     });
     
     // Allow users to set speed and rotation direction
-    animationFolder.add(options, 'Speed', 0, 0.1).name('Animation Speed');
-    animationFolder.add(options, 'RotateClockwise').name('Clockwise Rotation');
+    animationFolder.add(animationsOptions, 'Speed', 0, 0.1).name('Animation Speed');
+    animationFolder.add(animationsOptions, 'RotateClockwise').name('Clockwise Rotation');
 
     // Play/Pause both videos
     masterTVFolder.add(masterTVOptions, 'Play_Both_Videos');
@@ -409,14 +418,14 @@ function addHeadlights(car) {
     const headlightAngle = Math.PI / 6; // Narrow beam like real headlights
 
     // Left Headlight
-    const leftLight = new THREE.SpotLight(0xffffff, headlightIntensity, headlightDistance, headlightAngle);
+    leftLight = new THREE.SpotLight(0xffffff, headlightIntensity, headlightDistance, headlightAngle);
     leftLight.position.set(-1, 1, 1.5); // Adjust position to match car's headlights
     leftLight.penumbra = 1; // Soft edges
     leftLight.castShadow = true;
     leftLight.angle = Math.PI / 4;
 
     // Right Headlight
-    const rightLight = new THREE.SpotLight(0xffffff, headlightIntensity, headlightDistance, headlightAngle);
+    rightLight = new THREE.SpotLight(0xffffff, headlightIntensity, headlightDistance, headlightAngle);
     rightLight.position.set(1, 1, 1.5);
     rightLight.castShadow = true;
 
@@ -429,6 +438,9 @@ function addHeadlights(car) {
 
     leftLight.target = lightTarget;
     rightLight.target = lightTarget;
+
+    leftLight.visible = false;
+    rightLight.visible = false;
 
     car.add(leftLight);
     car.add(rightLight);
