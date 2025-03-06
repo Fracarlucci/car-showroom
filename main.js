@@ -366,6 +366,10 @@ function setupGUI(){
 }
 
 function loadModel(modelPath, groundHeight=0.1, soundPath) {
+    const loadingDiv = document.getElementById('loading');
+    const loadingText = document.getElementById('loadingText');
+    loadingDiv.style.display = 'flex'; // Show loading screen
+
     if (currentModel) {
         scene.remove(carGroup)
         currentModel.traverse((child) => {
@@ -397,12 +401,15 @@ function loadModel(modelPath, groundHeight=0.1, soundPath) {
             currentModel = carGroup;
             initClickSound(soundPath);
             addHeadlights(carGroup);
+            loadingDiv.style.display = 'none'; // Hide loading when done
         },
         function (xhr) {
-            console.log(`Model ${(xhr.loaded / xhr.total) * 100}% loaded`);
+            const percentLoaded = Math.round((xhr.loaded / xhr.total) * 100);
+            loadingText.innerText = `Loading... ${percentLoaded}%`; // Update percentage
         },
         function (error) {
-            console.error(error);
+            console.error('Error loading model:', error);
+            loadingText.innerText = "Failed to load model.";
         }
     );
 }
