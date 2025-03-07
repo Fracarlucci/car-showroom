@@ -273,6 +273,8 @@ function loadScene(){
     ceiling.rotation.x = Math.PI / 2;
     ceiling.position.y = ceilingHeight; // Keep it at original height
     scene.add(ceiling);
+
+    addImageToWall('./images/ferrari-logo.png', 0, 2, 9.9)
     
     renderer.shadowMap.enabled = true;
 }
@@ -501,6 +503,41 @@ function initClickSound(soundPath) {
     window.addEventListener('mousedown', clickHandler);
 }
 
+function moveInCircle() {
+    if (!currentModel || !isMoving || isRotating) return;
+    
+    angle += animationsOptions.Speed;
+    currentModel.position.x = originalPosition.x + Math.cos(angle) * radius;
+    currentModel.position.z = originalPosition.z + Math.sin(angle) * radius;
+    currentModel.rotation.y = -angle;
+}
+
+function rotate() {
+    if (!currentModel || isMoving || !isRotating) return;
+    
+    currentModel.position.x = originalPosition.x;
+    currentModel.position.z = originalPosition.z;
+    
+    const direction = animationsOptions.RotateClockwise ? 1 : -1; // Clockwise or Counterclockwise
+    currentModel.rotation.y += animationsOptions.Speed * direction;
+}
+
+function addImageToWall(imagePath, x, y, z) {
+    const texture = new THREE.TextureLoader().load(imagePath);
+    
+    const material = new THREE.MeshBasicMaterial({
+        map: texture,
+        transparent: true, // Enables transparency
+        alphaTest: 1, // Discard transparent pixels
+    });
+    const geometry = new THREE.PlaneGeometry(3,2.3); // Regola dimensioni
+    const mesh = new THREE.Mesh(geometry, material);
+
+    mesh.position.set(x, y, z); 
+    mesh.rotation.y = Math.PI;
+    scene.add(mesh);
+}
+
 function updateAspectRatio()
 {
     const ar = window.innerWidth/window.innerHeight;
@@ -518,23 +555,4 @@ function render(){
 function update(){
     if(isMoving) moveInCircle();
     else if(isRotating) rotate();
-}
-
-function moveInCircle() {
-    if (!currentModel || !isMoving || isRotating) return;
-
-    angle += animationsOptions.Speed;
-    currentModel.position.x = originalPosition.x + Math.cos(angle) * radius;
-    currentModel.position.z = originalPosition.z + Math.sin(angle) * radius;
-    currentModel.rotation.y = -angle;
-}
-
-function rotate() {
-    if (!currentModel || isMoving || !isRotating) return;
-
-    currentModel.position.x = originalPosition.x;
-    currentModel.position.z = originalPosition.z;
-
-    const direction = animationsOptions.RotateClockwise ? 1 : -1; // Clockwise or Counterclockwise
-    currentModel.rotation.y += animationsOptions.Speed * direction;
 }
