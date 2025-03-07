@@ -464,7 +464,7 @@ function initClickSound(soundPath) {
 
     // Remove previous event listener (if exists)
     if (clickHandler) {
-        window.removeEventListener('click', clickHandler);
+        window.removeEventListener('mousedown', clickHandler);
     }
     
     // Load an audio file
@@ -498,7 +498,7 @@ function initClickSound(soundPath) {
     };
 
     // Add new click event listener
-    window.addEventListener('click', clickHandler);
+    window.addEventListener('mousedown', clickHandler);
 }
 
 function updateAspectRatio()
