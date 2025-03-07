@@ -120,8 +120,7 @@ function init(){
     
     // Camara
     camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 1,1000);
-    camera.position.set( 0.5, 2, 7 );
-    camera.lookAt( new THREE.Vector3(0,1,0) );
+    camera.position.set(0, 2, 7 );
     
     // Lights Setup
     ambientLight.visible = false;
@@ -156,10 +155,17 @@ function init(){
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
+    controls.screenSpacePanning = false; 
     controls.minDistance = 3;  // Minimum zoom (prevents camera from going inside model)
     controls.maxDistance = 6;
-    controls.maxPolarAngle = Math.PI / 2.5; // Limits vertical rotation (prevents looking below ground)
+    controls.maxPolarAngle = Math.PI / 2.7; // Limits vertical rotation (prevents looking below ground)
     controls.minPolarAngle = 0;
+
+    controls.addEventListener('change', () => {
+        camera.position.y = camera.position.y < 0 ? 0 : camera.position.y;
+        camera.position.x = camera.position.x < -8 ? -8 : camera.position.x > 8 ? 8 : camera.position.x;
+        camera.position.z = camera.position.z < -8 ? -8 : camera.position.z > 8 ? 8 : camera.position.z;
+    });
     controls.update();
     
     renderer.shadowMap.enabled = true;
