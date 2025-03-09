@@ -73,12 +73,12 @@ const landscapeTV2 = new THREE.Mesh(
 
 const masterTVOptions = {
     TV_On: true,
-    Play_Both_Videos: () => {
+    Play_Videos: () => {
         video1.play();
         video2.play();
         video3.play();
     },
-    Pause_Both_Videos: () => {
+    Pause_Videos: () => {
         video1.pause();
         video2.pause();
         video3.pause();
@@ -363,8 +363,8 @@ function setupGUI(){
     animationFolder.add(animationsOptions, 'RotateClockwise').name('Clockwise Rotation');
 
     // Play/Pause both videos
-    masterTVFolder.add(masterTVOptions, 'Play_Both_Videos');
-    masterTVFolder.add(masterTVOptions, 'Pause_Both_Videos');
+    masterTVFolder.add(masterTVOptions, 'Play_Videos');
+    masterTVFolder.add(masterTVOptions, 'Pause_Videos');
     masterTVFolder.add(masterTVOptions, 'TV_On').onChange(value => {
         portraitTV.visible = value;
         landscapeTV.visible = value;
