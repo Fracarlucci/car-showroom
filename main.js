@@ -37,7 +37,7 @@ const modelPaths = {
     "Ferrari Testarossa": {
         path: './models/ferrari-testarossa/source/1984_ferrari_testarossa_f110.glb',
         height: 0,
-        sound: './sounds/ferrari_f40.mp3'
+        sound: './sounds/ferrari-testarossa.mp3'
     },
 };
 
