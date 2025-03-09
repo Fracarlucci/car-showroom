@@ -34,6 +34,11 @@ const modelPaths = {
         height: 0,
         sound: './sounds/ferrari_f40.mp3'
     },
+    "Ferrari Testarossa": {
+        path: './models/ferrari-testarossa/source/1984_ferrari_testarossa_f110.glb',
+        height: 0,
+        sound: './sounds/ferrari_f40.mp3'
+    },
 };
 
 const headlightsOptions = { Headlights: false };
@@ -490,8 +495,8 @@ function addHeadlights(car) {
     leftLight.target = lightTarget;
     rightLight.target = lightTarget;
 
-    leftLight.visible = false;
-    rightLight.visible = false;
+    leftLight.visible = headlightsOptions.Headlights;
+    rightLight.visible = headlightsOptions.Headlights;
 
     car.add(leftLight);
     car.add(rightLight);
