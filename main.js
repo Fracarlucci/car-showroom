@@ -453,8 +453,7 @@ function loadModel(modelPath, groundHeight=0.1, soundPath) {
             loadingDiv.style.display = 'none'; // Hide loading when done
         },
         function (xhr) {
-            const percentLoaded = Math.round((xhr.loaded / xhr.total) * 100);
-            loadingText.innerText = `Loading... ${percentLoaded}%`; // Update percentage
+            const percentLoaded = (xhr.loaded / xhr.total) * 100;
         },
         function (error) {
             console.error('Error loading model:', error);
